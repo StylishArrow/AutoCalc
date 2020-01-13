@@ -1,0 +1,39 @@
+import java.util.Scanner;
+
+public class CalculatorFace {
+    private DetermineType detType = new DetermineType();
+    public void start(){
+
+        System.out.println("Enter f(x)");
+        Scanner sc = new Scanner(System.in);
+
+        String fx = "csc(x)" +
+                "";//sc.nextLine();
+        if(detType.isitpoly(fx)) {
+            polynomial(fx);
+        } else if(detType.isittrig(fx)){
+            trigonometric(fx);
+        } else if(detType.isitlog()){
+            System.out.println(fx+" is it a logarithm");
+        }else{
+            System.out.println("Cannot Determine");
+        }
+    }
+
+    private void polynomial(String fx){
+        System.out.println(fx + " is a polynomial");
+        Polynomial poly = new Polynomial();
+        //print either derivative or integral
+        System.out.println( poly.nextMove(fx, detType) );
+
+    }
+
+    private void trigonometric(String fx){
+        System.out.println(fx+" is a trig function");
+        Trigonometric trig = new Trigonometric();
+        System.out.println(trig.nextMove(fx, detType));
+
+    }
+
+
+}

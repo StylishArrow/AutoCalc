@@ -1,0 +1,141 @@
+public class Fractions {
+
+    public int[] allFactors(int a) {
+
+        int fracIndex = 0;
+        String[] fraction = new String[a];
+        //get a list of strings that are fractions from a/a, a/a-1, a/a-2,...,a/1
+        for (int i = a; i > 0; i--) {
+            fraction[fracIndex] = a + "/" + i;
+            fracIndex++;
+        }
+
+        //set up arrays for int numerator and denominator
+        int[] n = new int[a];
+        int[] d = new int[a];
+        //since delim will always split a fraction into two elements the only indices needed are 0 and 1
+        int numIndex = 0;
+        int denIndex = 1;
+
+        String delimiter = "[/]";
+        int modCounter = 0;
+        for (int i = 0; i < a; i++) {
+            String[] numDen = fraction[i].split(delimiter);
+
+            //parse integers from the string
+            n[i] = Integer.parseInt(numDen[numIndex]);//these two numbers
+            d[i] = Integer.parseInt(numDen[denIndex]);//are constant
+
+            //count the number of times there is no remainder to count number of factors for array of factors
+            if (n[i] % d[i] == 0) {
+                modCounter++;
+                //System.out.println(n[i]/d[i]);
+            }
+
+        }
+
+        int[] factors = new int[modCounter];
+        int factorIndex = 0;
+        //cycle through both lists of numerator and denominator if nmod(d)=0 then n/d gets put into factors array
+        for (int i = 0; i < a; i++) {
+            if (n[i] % d[i] == 0) {
+                factors[factorIndex] = n[i] / d[i];
+                //System.out.println(factors[factorIndex]);
+                factorIndex++;
+            }
+        }
+
+        return factors;
+    }
+    public int greatestCommonFactor(int a, int b) {
+        int[] alpha = allFactors(a);
+        int[] beta = allFactors(b);
+
+        //merge sort lists
+        int[] gamma = mergeTheSorted(alpha, beta);
+        int j = 1;
+        int pairNum = 0;
+
+        //count pairs
+        for(int i = 0; i < gamma.length; i++){
+            if(j < gamma.length) {
+
+                if(gamma[i] == gamma[j]){
+                    pairNum++;
+                }
+                j++;
+            }
+        }
+
+        //collect pairs of the same element bc those are common factors
+        int[] pairs = new int[pairNum];
+        j = 1;
+        int pIndex = 0;
+        for(int i = 0; i < gamma.length; i++){
+            if(j < gamma.length) {
+
+                if(gamma[i] == gamma[j]){
+                    pairs[pIndex] = gamma[i];
+                    //System.out.println( pairs[pIndex] );
+                }
+                j++;
+            }
+        }
+
+        //determine the largest element. The list is sorted from highest to lowest therefore the first element must be
+        //the largest
+        return pairs[0];
+    }
+    public String reduce(String fraction){
+        //fraction must be of the form a+"/"+b
+        String delimiter = "[/]";
+        String[] parts = fraction.split(delimiter);
+        int num = Integer.parseInt(parts[0]);
+        int den = Integer.parseInt((parts[1]));
+
+        int gcf = greatestCommonFactor(num, den);
+
+        num = (num / gcf);
+        den = (den / gcf);
+        if(den == 1){
+            return num+"";
+        }
+        return num +"/"+den;
+    }
+
+    private int[] mergeTheSorted(int[] leftList, int[] rightList){
+        int[] out = new int[leftList.length + rightList.length];
+        int leftI = 0;
+        int rightI = 0;
+        int outI = 0;
+
+        while(leftI < leftList.length && rightI < rightList.length){
+            if(leftList[leftI] < rightList[rightI]){
+                //increment leftI by 1
+                out[outI] = leftList[leftI];
+                outI++;
+                leftI++;
+            }else{
+                //increment rightI by 1
+                out[outI] = rightList[rightI];
+                outI++;
+                rightI++;
+            }
+        }
+
+        if(leftI < leftList.length){
+            return addRest(out, leftList, outI, leftI);
+        }else if(rightI < rightList.length){
+            return addRest(out, rightList, outI, rightI);
+        }
+        return out;
+    }
+    private int[] addRest(int[] merged, int[] whatRemains, int mergedI, int whatRemainsI){
+        for(int i = whatRemainsI; i < whatRemains.length; i++) {
+            merged[mergedI] = whatRemains[i];
+            mergedI++;
+        }
+        return merged;
+    }
+
+}

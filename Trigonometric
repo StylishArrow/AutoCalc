@@ -1,0 +1,364 @@
+import java.util.ArrayList;
+
+public class Trigonometric {
+    private Formatting f = new Formatting();
+    private String[] source = {"sin", "cos", "tan", "csc", "sec", "cot"};
+    private String spacer = "( )";
+    private ArrayList<Boolean> inParentheses = new ArrayList<>();
+    private ArrayList<String> coefficients = new ArrayList<>();
+    private ArrayList<String> exponents = new ArrayList<>();
+    private ArrayList<String> inside = new ArrayList<>();
+    private ArrayList<Integer> LParLoc = new ArrayList<>();
+    private ArrayList<Integer> RParLoc = new ArrayList<>();
+    private ArrayList<Integer> carrotLoc = new ArrayList<>();
+    private String carrot = "^";
+    private String plus = "+"; private String minus = "-"; private String mult = "*"; private String div = "/";
+    private ArrayList<String> wholeTerms = new ArrayList<>();
+    private ArrayList<String> brokenUX = new ArrayList<>();
+    private String var = "";
+
+    public String nextMove(String fx, DetermineType dt){
+        ArrayList<String> rawSymbols = new ArrayList<>();
+        for(int i = 0; i < fx.length(); i++){
+            String s = fx.charAt(i) + "";
+            rawSymbols.add(s);
+        }
+        //f.printStrings(rawSymbols);
+
+        //separate the dropped trig functions from the operators
+        String[] t = {"s", "i", "n", "c", "o", "t", "a", "e"};
+        ArrayList<String> spaceUX = new ArrayList<>();
+        for(String s : rawSymbols){
+            boolean noTrig = !( s.equals(t[0]) || s.equals(t[1]) || s.equals(t[2]) || s.equals(t[3]) || s.equals(t[4])
+                    || s.equals(t[5]) || s.equals(t[6]) || s.equals(t[7]) );
+            if(noTrig){
+                spaceUX.add(s);
+            }
+        }
+
+        ArrayList<String> operations = new ArrayList<>();
+        ArrayList<Integer> opLoc = new ArrayList<>();
+
+        String lPar = "(";
+        String rPar = ")";
+
+        boolean place = false;
+        for(String s : spaceUX){
+            if( !(s.equals(" ")) ){
+                brokenUX.add(s);
+                inParentheses.add(place);
+                if(s.equals(lPar)){
+                    place = true;
+                }else if(s.equals(rPar)){
+                    place = false;
+                }
+
+            }
+        }
+
+        //collect operations and their locations
+        int j = 0;
+        //locate open and close parentheses, carrots, and arithmetic operations
+        for(String s : brokenUX){
+            boolean opCheck = s.equals(plus) || s.equals(minus);
+            if(opCheck && !inParentheses.get(j)){
+                operations.add(s);
+                opLoc.add(j);
+            }
+            if(s.equals(lPar)){
+                LParLoc.add(j);
+            }else if(s.equals(rPar)) {
+                RParLoc.add(j);
+            }else if(s.equals(carrot) && !inParentheses.get(j)){
+                carrotLoc.add(j);
+            }
+            j++;
+        }
+
+        //use arithmetic operation locations to separate terms
+
+        int lastOpIndex = opLoc.size() - 1;
+
+        if(opLoc.size() > 0) {
+            //to avoid null pointer exception the code within this block is run when there are multiple terms
+            wholeTerms.add(f.gatherAllElements(0, opLoc.get(0), brokenUX));
+            for (int i = 0; i < lastOpIndex; i++) {
+                wholeTerms.add(f.gatherAllElements(opLoc.get(i) + 1, opLoc.get(i + 1), brokenUX));
+            }
+            wholeTerms.add(f.gatherAllElements(opLoc.get(lastOpIndex) + 1, brokenUX.size(), brokenUX));
+        }else{
+            //add single term fx to wholeTerms and the code will run smoothly
+            wholeTerms.add(fx);
+        }
+
+        //which terms have exponents
+        ArrayList<Boolean> carrotBoolean = new ArrayList<>();
+        for (int i = 0; i < wholeTerms.size(); i++) {
+            if (f.ifCarrot(wholeTerms.get(i))) {
+                carrotBoolean.add(true);
+            } else {
+                carrotBoolean.add(false);
+            }
+        }
+
+        //sort out coefficients, exponents, and inside functions
+        //start at zero
+        sortOut(0, 0, 0);
+        //rest of the terms can be iterated through
+        int l = 0;
+        for (int i = 0; i < carrotBoolean.size() - 1; i++) {
+            //use operation locations for j
+            boolean car = carrotBoolean.get(i);
+            //carrot index counts up if there is a carrot
+            if (car) {
+                sortOut((opLoc.get(i) + 1), (i + 1), l);
+                l++;
+            } else {
+                //no carrot means it can be left at zero
+                sortOut((opLoc.get(i) + 1), (i + 1), 0);
+            }
+
+        }
+
+        //put each trig operator into and element of a string array
+        //drop variable
+        var = dt.getVariable();
+        ArrayList<String> varDrop = f.removeSpaces(var,rawSymbols);
+        //drop operations
+        ArrayList<String> opsDropped = f.removeSpaces(plus, varDrop);
+        opsDropped = f.removeSpaces(minus, opsDropped);
+        //drop numbers
+        ArrayList<String> numDropped = new ArrayList<>();
+        for(String s : opsDropped){
+            if(!(f.isNumeric(s) || s.equals("^") )){
+                numDropped.add(s);
+            }
+        }
+
+        ArrayList<String> functions = new ArrayList<>();
+        for(int i = 0; i < numDropped.size(); i+=3) {
+            functions.add(f.gatherNonNumericElements(i, i+3, numDropped));
+        }
+
+        String DI = "D";
+        ArrayList<String> dfdx = new ArrayList<>();
+        if(DI.equals("D")){
+            int n = 0;
+            while(n < wholeTerms.size()) {
+                ArrayList<String> term1 = ddxTerm(functions.get(n), n);
+                dfdx.add(term1.get(0));
+                n++;
+            }
+        }else if(DI.equals("I")){
+            ArrayList<String> Ifdx = Idx(functions);
+            f.printStrings(Ifdx);
+        }
+
+        if(dfdx.size() == 1){
+            return dfdx.get(0);
+        }
+
+        StringBuilder nextF = new StringBuilder();
+        int i = 0;
+        for(String df : dfdx){
+            String firstChar = df.charAt(0)+"";
+            if(firstChar.equals(minus)) {
+                //find a way to space out minus symbol
+                String frontSpace = "";
+                if(i == 0) {
+                   frontSpace = df;
+                }else{
+                    frontSpace = " "+df;
+                }
+                nextF.append(frontSpace);
+
+            }else if( f.isNumeric(firstChar) ){
+                if(i == 0){
+                    nextF.append(df);
+                }else {
+                    String tmp = " " + plus + " " + df;
+                    nextF.append(tmp);
+                }
+            }
+            i++;
+        }
+
+        return nextF.toString();
+    }
+
+    private String zeroExponent(int dEdx, String nonZero, String pureTerm, String dudx, int c){
+        String nextTerm;
+
+        String inFront = multiply(c, dudx);
+
+        if(dEdx == 0){
+            nextTerm = inFront + pureTerm;
+        }
+        else{
+            nextTerm = inFront + nonZero + pureTerm;
+        }
+        return nextTerm;
+    }
+
+    private String multiply(int c, String dudx){
+        boolean beforeCarrot = true;
+        boolean atX = false;
+
+        //extract coefficient of inside function and rest of function
+        StringBuilder uNums = new StringBuilder();
+        StringBuilder restX = new StringBuilder();
+        for(int i = 0; i < dudx.length(); i++){
+            String t = dudx.charAt(i)+"";
+            if(f.isNumeric(t) && beforeCarrot){
+                uNums.append(t);
+            }
+            if(t.equals(carrot)){
+                beforeCarrot = false;
+            }
+
+            if(t.equals(var)){
+                atX = true;
+            }
+            if(atX && !t.equals(")")){
+                restX.append(t);
+            }
+        }
+
+        //multiply c and coefficient of function
+        int parsed = c * Integer.parseInt( uNums.toString() );
+        String reattach;
+
+        //alter formatting for minus sign
+        if(parsed < 0 && Math.abs(parsed) == 1){
+            reattach = "-"+restX.toString();
+        }else {
+            reattach = parsed + restX.toString();
+        }
+
+        return reattach;
+    }
+
+    private void sortOut(int start, int parIndex, int carIndex){
+        boolean checkIfCarrot = f.ifCarrot(wholeTerms.get(parIndex));
+
+        //code will play out differently depending on how symbols list is structured
+        if(checkIfCarrot){
+            //f.println("yes car "+wholeTerms.get(parIndex));
+            start = f.consolidate(start, carrotLoc.get(carIndex), brokenUX, coefficients);
+            start = f.consolidate(start, LParLoc.get(parIndex), brokenUX, exponents);
+            f.consolidate(start, RParLoc.get(parIndex), brokenUX, inside);
+        }else{
+            //f.println("no car "+wholeTerms.get(parIndex));
+            start = f.consolidate(start, LParLoc.get(parIndex), brokenUX, coefficients);
+            exponents.add("1");
+            f.consolidate(start, RParLoc.get(parIndex), brokenUX, inside);
+        }
+    }
+
+    private ArrayList<String> ddxTerm(String fx, int n){
+        ArrayList<String> dfdx = new ArrayList<>();
+        DetermineType detType = new DetermineType();
+        Polynomial poly = new Polynomial();
+
+        String coeff = coefficients.get(n);
+        if (coeff.equals(" ")) {
+            coeff = "1";
+        }
+
+        String expo = exponents.get(n);
+        String u = inside.get(n);
+        String dudx = spacer;
+
+        if(detType.isitpoly(u)){
+            dudx = "("+poly.nextMove(u, detType)+")";
+        }else if(detType.isittrig(u)){
+            dudx = "("+nextMove(u, detType)+")";
+        }
+
+        u = "("+u+")";
+
+        int e = 1;
+        if(f.isNumeric(expo)) {
+            e = Integer.parseInt(expo);
+        }
+
+        int dEdx = e - 1;
+
+        int c = 1;
+        if(f.isNumeric(coeff)) {
+            c = Integer.parseInt(coeff);
+        }
+
+        int p = c*e;
+        String nonZero;
+        String pureTerm;
+        String nextTerm;
+        if(fx.equals(source[0])){
+            //d[sin]/dx = cos
+            nonZero = source[0] + carrot + dEdx + u;
+            pureTerm = source[1] + u;
+            nextTerm = zeroExponent(dEdx, nonZero, pureTerm, dudx, p);
+            dfdx.add(nextTerm);
+        }else if(fx.equals(source[1])){
+            //d[cos]dx = -sin
+            nonZero = source[1] + carrot + dEdx + u;
+            pureTerm = source[0] + u;
+            nextTerm = zeroExponent(dEdx, nonZero, pureTerm, dudx, -1*p);
+            dfdx.add(nextTerm);
+        }else if(fx.equals(source[2])){
+            //d[tan]/dx = sec^2
+            nonZero = source[2] + carrot + dEdx + u;
+            pureTerm = source[4] + "^2" + u;
+            nextTerm = zeroExponent(dEdx, nonZero, pureTerm, dudx, p);
+            dfdx.add(nextTerm);
+        }else if(fx.equals(source[3])){
+            //d[csc]/dx = csc cot
+            nonZero = source[3] + carrot + dEdx + u;
+            pureTerm = source[3] + u + source[5] + u;
+            nextTerm = zeroExponent(dEdx, nonZero, pureTerm, dudx, -1*p);
+            dfdx.add(nextTerm);
+        }else if(fx.equals(source[4])){
+            //d[sec]/dx = sec tan
+            nonZero = source[4] + carrot + dEdx + u;
+            pureTerm = source[4] + u + source[2] + u ;
+            nextTerm = zeroExponent(dEdx, nonZero, pureTerm, dudx,p);
+            dfdx.add(nextTerm);
+        }else if(fx.equals(source[5])){
+            //d[cot]/dx = -csc^2
+            nonZero = source[5]+carrot+dEdx + u;
+            pureTerm = dudx+source[3]+"^2"+u;
+            nextTerm = zeroExponent(dEdx, nonZero, pureTerm, dudx, -1*p);
+            dfdx.add(nextTerm);
+        }
+
+        return dfdx;
+    }
+
+    private ArrayList<String> Idx(ArrayList<String> fxs){
+        ArrayList<String> Ifdx = new ArrayList<>();
+        String abs = "|";
+        for(String s : fxs){
+            if(s.equals(source[0])){
+                //I sin dx = -cos
+                Ifdx.add("-"+source[1]+spacer);
+            }else if(s.equals(source[1])){
+                //I cos dx = sin
+                Ifdx.add(source[0]+spacer);
+            }else if(s.equals(source[2])){
+                //I tan dx = -ln|cos|
+                Ifdx.add("-ln"+abs+source[1]+spacer+abs);
+            }else if(s.equals(source[3])){
+                //I csc dx = -ln|csc cot|
+                Ifdx.add("-ln"+abs+source[3]+spacer+" + "+source[5]+spacer+abs);
+            }else if(s.equals(source[4])){
+                //I sec dx = ln|sec tan|
+                Ifdx.add("ln"+abs+source[4]+spacer+" + "+source[2]+spacer+abs);
+            }else if(s.equals(source[5])){
+                //I cot dx
+                Ifdx.add("ln"+abs+source[0]+spacer+abs);
+            }
+        }
+        return Ifdx;
+    }
+
+}

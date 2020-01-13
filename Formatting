@@ -1,0 +1,145 @@
+import java.util.ArrayList;
+
+public class Formatting {
+
+    //got off internet. Seems too work.
+    public boolean isNumeric(String strNum) {
+        try {
+            int i = Integer.parseInt(strNum);
+        } catch (NumberFormatException | NullPointerException nfe) {
+            return false;
+        }
+        return true;
+    }
+
+    public ArrayList<String> removeSpaces(String v, ArrayList<String> A){
+        ArrayList<String> B = new ArrayList<>();
+        for(String a : A){
+            if(!a.equals(" ") && !a.equals(v) && !a.equals("(") && !a.equals(")")) {
+                //removing spaces
+                B.add(a);
+            }
+        }
+
+        return B;
+    }
+
+    private ArrayList<Boolean> determineBoundaries(String term){
+        ArrayList<Boolean> inPar = new ArrayList<>();
+        boolean place = false;
+        for(int i = 0; i < term.length(); i++){
+            String ti = term.charAt(i)+"";
+            if(ti.equals("(")){
+                place = true;
+            }else if(ti.equals(")")){
+                place = false;
+            }
+            inPar.add(place);
+        }
+        return inPar;
+    }
+
+    public boolean ifCarrot(String term){
+        String carrot = "^";
+        ArrayList<Boolean> inPar = determineBoundaries(term);
+        ArrayList<Boolean> ifCarrot = new ArrayList<>();
+        int length = term.length();
+        for(int i = 0; i < length; i++){
+            char c = term.charAt(i);
+            if(!inPar.get(i)){
+                if (carrot.equals(c + "")) {
+                    ifCarrot.add(true);
+                }
+                String lastChar = term.charAt((length-1))+"";
+                if( !carrot.equals(lastChar) ){
+                    ifCarrot.add(false);
+                }
+            }
+
+        }
+
+        boolean checkIfCarrot = false;
+        for(boolean b : ifCarrot){
+            if(b){
+                checkIfCarrot = true;
+            }
+        }
+        return checkIfCarrot;
+    }
+    //Gathering
+    public String gatherNonNumericElements(int low, int up, ArrayList<String> s){
+        StringBuilder sb = new StringBuilder();
+
+        for(int i = low; i < up; i++){
+            if(!isNumeric(s.get(i))) {
+                sb.append(s.get(i));
+            }
+        }
+        return sb.toString();
+    }
+
+    public String gatherAllElements(int low, int up, ArrayList<String> s){
+        StringBuilder t0 = new StringBuilder();
+        for(int i = low; i < up; i++){
+            t0.append( s.get(i) );
+        }
+        return t0.toString();
+    }
+
+    public int consolidate(int j, int bound, ArrayList<String> broken, ArrayList<String> inTake){
+        StringBuilder word = new StringBuilder();
+        while(j < bound){
+            word.append(broken.get(j));
+            j++;
+        }
+        inTake.add(word.toString());
+        return j+1;
+    }
+
+    //Printing
+    public void println(String s){
+        System.out.println(s);
+    }
+
+    public void print(String s){
+        System.out.print(s);
+    }
+
+    public ArrayList<Integer> stringToInt(ArrayList<String> strings){
+        ArrayList<Integer> integers = new ArrayList<>();
+        for(String s : strings){
+            if(isNumeric(s)){
+                integers.add(Integer.parseInt(s));
+            }
+        }
+        return integers;
+    }
+
+    public void printStrings(ArrayList<String> L){
+
+        for (String l : L) {
+            System.out.print(l + ", ");
+        }
+
+        System.out.println();
+    }
+
+    public void printIntegers(ArrayList<Integer> L){
+        for(int l  : L){
+            System.out.print(l+", ");
+        }
+        System.out.println();
+    }
+
+    public void printBooleans(ArrayList<Boolean> L){
+        for(boolean l : L){
+            if(!l) {
+                System.out.print(0+", ");
+            }else{
+                System.out.print(1+", ");
+            }
+        }
+        System.out.println();
+    }
+
+}

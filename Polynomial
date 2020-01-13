@@ -1,0 +1,323 @@
+import java.util.ArrayList;
+import java.util.Scanner;
+
+public class Polynomial {
+    private Formatting f = new Formatting();
+    //Op is the set of operations
+    private ArrayList<String> Op = new ArrayList<>();
+    //vLoc is the set of variable locations
+    private ArrayList<Integer> vLoc = new ArrayList<>();
+    //sLoc is the set of space locations
+    private ArrayList<Integer> sLoc = new ArrayList<>();
+    //opLoc is the set of operation locations
+    private ArrayList<Integer> opLoc = new ArrayList<>();
+    //
+    private ArrayList<String> fullCoeff = new ArrayList<>();
+    //
+    private ArrayList<String> fullExpo = new ArrayList<>();
+
+    public String nextMove(String fx, DetermineType dt){
+        //System.out.println("Would you like to (0)differentiate or (1)integrate?");
+        Scanner sc = new Scanner(System.in);
+        String DI = "0"; //sc.nextLine();
+        String[] ops = {"+", "-", "*", "/"};
+        String var = dt.getVariable();
+
+        //check if fx is a constant
+        if(f.isNumeric(fx)){
+            return "0";
+        }
+
+        //iterate through equation remove signs and save them in Op array
+        //copy all elements of equation into new array except for signs and carrots
+        ArrayList<String> noSpaceFx = new ArrayList<>();
+        //capital F doesn't mean integration
+        for(int i = 0; i < fx.length(); i++){
+            String e = fx.charAt(i)+"";
+            if(!(e.equals(" ") || e.equals("^"))) {
+                noSpaceFx.add(e);
+            }
+        }
+
+        int i = 0;
+        for(String e : noSpaceFx){
+            if(var.equals(e)){
+                vLoc.add(i);
+            }
+
+            if(ops[0].equals(e) || ops[1].equals(e) || ops[2].equals(e) || ops[3].equals(e)){
+                opLoc.add(i);
+                Op.add(e);
+            }
+            i++;
+        }
+
+        //establish boundaries between brokenCoeff and powers
+        ArrayList<Boolean> coefficientCheck = new ArrayList<>();
+        int j = 0;
+        for(i = 0; i < opLoc.size(); i++){
+            j = determinePow(j, vLoc.get(i), true, coefficientCheck, true);
+            j = determinePow(j, opLoc.get(i), false, coefficientCheck, false);
+        }
+
+        //last terms must be dealt with separately
+        j = determinePow(j, vLoc.get(opLoc.size()), true, coefficientCheck, true);
+        determinePow(j, noSpaceFx.size(), false, coefficientCheck, false);
+
+        //sort out digit coefficients and exponents into whole coefficients and exponents
+
+        //ddx or antiddx
+        if(DI.equals("0")){
+            return ddx(noSpaceFx, coefficientCheck, var);
+        }
+
+        return "";
+    }
+
+    private int determinePow(int i, int upBound, boolean equal, ArrayList<Boolean> bList, boolean statement){
+
+        if(equal) {
+            //when equals is true we are approaching a variable which means all before digits are part of coeff.
+            while (i <= upBound) {
+                bList.add(statement);
+                i++;
+            }
+        }else{
+            //when equals is false we are approaching an operation which means previous numbers were powers
+            while(i < upBound){
+                bList.add(statement);
+                i++;
+            }
+        }
+        return i;
+    }
+
+    private String digitsToNumber(ArrayList<Integer> digits){
+        StringBuilder fullNum = new StringBuilder();
+        for(int d : digits){
+            fullNum.append(d);
+        }
+        return fullNum.toString();
+    }
+
+    private String singleTerm(ArrayList<String> brokenEqu, ArrayList<Boolean> positions, String var){
+
+        ArrayList<Integer> coeff = new ArrayList<>();
+        ArrayList<Integer> expo = new ArrayList<>();
+        //if linear
+        //check if there is carrot 1
+
+        //collect all coefficients and exponents in list
+        int i = 0;
+        for(boolean b : positions){
+
+            if(f.isNumeric(brokenEqu.get(i))) {
+                if(b){
+                    int d = Integer.parseInt(brokenEqu.get(i));
+                    coeff.add(d);
+                }else{
+                    int e = Integer.parseInt(brokenEqu.get(i));
+                    expo.add(e);
+                }
+            }
+
+            i++;
+        }
+
+        String last = brokenEqu.get( brokenEqu.size() - 1);
+        String coefficient = digitsToNumber(coeff);
+
+        if(coefficient.equals("")){
+            coefficient = "1";
+        }
+
+        String exponent = digitsToNumber(expo);
+
+        //if last is a variable then the brokenExpo is 1 return a constant
+        if(last.equals(var)){
+            return coefficient;
+        }
+
+        //if brokenExpo is 1 return a constant
+        if(exponent.equals("1")) {
+            return coefficient;
+        }
+
+        //if brokenExpo is some number
+        int ddxC = Integer.parseInt(coefficient) * Integer.parseInt(exponent);
+        int ddxE = Integer.parseInt(exponent) - 1;
+        return ddxC +var+"^"+ddxE;
+
+    }
+
+    private void sortOut(ArrayList<String> brokenEqu, ArrayList<Boolean> positions){
+        //put each coefficient in its own array and do the same for each exponent
+
+        //start doesn't follow the pattern so initiation must be out of the loop
+        int lowerBound = 0;
+        int upperBound = opLoc.get(0);
+        int lastIndex = opLoc.size() - 1;
+        severalTerms(lowerBound, upperBound, brokenEqu, positions);
+
+        //intermediate terms follow this pattern
+        int j = 1;
+        for(int i = 0; i < opLoc.size()-1; i++){
+            //count through each term
+            lowerBound = opLoc.get(i);
+            upperBound = opLoc.get(j);
+            severalTerms(lowerBound, upperBound, brokenEqu, positions);
+            j++;
+        }
+
+        //neither does the last one so it also has to be out of the loop
+        lowerBound = opLoc.get(lastIndex);
+        upperBound = brokenEqu.size();
+        severalTerms(lowerBound, upperBound, brokenEqu, positions);
+    }
+
+    private void severalTerms(int lowerBound, int upperBound, ArrayList<String> brokenEqu, ArrayList<Boolean> positions){
+        //digit coefficients and exponents
+        ArrayList<Integer> digitC = new ArrayList<>();
+        ArrayList<Integer> digitE = new ArrayList<>();
+
+        for(int i = lowerBound; i < upperBound; i++){
+            if(f.isNumeric(brokenEqu.get(i))){
+                if(positions.get(i)){
+                    int c =  Integer.parseInt( brokenEqu.get(i) );
+                    //put gathered coefficient digits into one coefficient string
+                    digitC.add( c );
+                }else{
+                    //put gathered exponent digits into one exponent string
+                    int e =  Integer.parseInt( brokenEqu.get(i) );
+                    digitE.add( e );
+                }
+            }
+        }
+
+        //blankFace checks if anything element is blank and then turns it into a one
+        String c = digitsToNumber(digitC);
+        blankFace(c, fullCoeff);
+
+        String e = digitsToNumber(digitE);
+        blankFace(e, fullExpo);
+
+        //f.println("");
+    }
+
+    private void blankFace(String s, ArrayList<String> list){
+        String blank = "";
+        String one = "1";
+        if(blank.equals(s)){
+            s = one;
+            list.add(s);
+        }else{
+            list.add(s);
+        }
+        //f.print(s+":");
+
+    }
+
+    private String binaryFilter(int c, int e, String var, String op) {
+        String carrot = "^";
+        String space = " ";
+        String blank = "";
+        String carrotEx = carrot + e;
+
+        //this is a formatting method that gets rid of extraneous exponents and variables
+        if (e == 1) {
+            carrotEx = blank;
+        } else if (e == 0) {
+            var = blank;
+            carrotEx = blank;
+        }
+
+        if(!op.equals(blank)) {
+            return c + var + carrotEx + space + op + space;
+        }else{
+            return c + var + carrotEx;
+        }
+    }
+
+    private String reassemble(String var, ArrayList<Integer> nextC, ArrayList<Integer> nextE){
+        //reassemble the function
+        String carrot = "^";
+        StringBuilder nextF = new StringBuilder();
+        String space = " ";
+        String blank = "";
+
+        //Build an array of individual terms
+        //first term
+        int firstIndex = 0;
+        String firstTerm;
+        int c = nextC.get(firstIndex);
+        int e = nextE.get(firstIndex);
+        String op = Op.get(firstIndex);
+        firstTerm = binaryFilter(c, e, var, op);
+
+        //intermediate terms
+        ArrayList<String> middleTerms = new ArrayList<>();
+        int lowBound = firstIndex + 1;
+        int upBound = opLoc.size();
+        for(int i = lowBound; i < upBound; i++){
+            String midTerm;
+            op = Op.get(i);
+            c = nextC.get(i);
+            e = nextE.get(i);
+            midTerm = binaryFilter(c, e, var, op);
+            middleTerms.add(midTerm);
+        }
+
+        //final term
+        int lastIndex = opLoc.size();
+        String lastTerm;
+        c = nextC.get(lastIndex);
+        e = nextE.get(lastIndex);
+        lastTerm = binaryFilter(c, e, var, blank);
+
+        //Append each element of array into a single string builder
+        //Append first term
+        nextF.append(firstTerm);
+        //less than the number of intermediate term --> opLoc.size() - 2 == bound
+        for(int i = 0; i < opLoc.size() - 1; i++){
+            nextF.append(middleTerms.get(i));
+        }
+        nextF.append(lastTerm);
+
+        //f.println(nextF.toString());
+
+        return nextF.toString();
+    }
+
+    public String ddx(ArrayList<String> brokenEqu, ArrayList<Boolean> positions, String var){
+        //if there is one term
+        if(opLoc.size() == 0){
+            return singleTerm(brokenEqu, positions, var);
+        }
+
+        //if is there are n terms
+        sortOut(brokenEqu, positions);
+
+        ArrayList<Integer> ddxC = new ArrayList<>();
+        ArrayList<Integer> ddxE = new ArrayList<>();
+
+        for(int i = 0; i < fullCoeff.size(); i++){
+            int c = Integer.parseInt(fullCoeff.get(i));
+            int e = Integer.parseInt((fullExpo.get(i)));
+            ddxC.add(c*e);
+            ddxE.add(e -1);
+        }
+
+        //reassemble the function
+        return reassemble(var, ddxC, ddxE);
+    }
+
+    private void Idx(String fx){
+
+    }
+
+    private int definiteIdx(String fx){
+
+        return -1;
+    }
+
+}

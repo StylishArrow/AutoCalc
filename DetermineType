@@ -1,0 +1,200 @@
+import java.util.ArrayList;
+
+public class DetermineType {
+
+    //identify symbols and numbers first
+    private String variable;
+    //N is the set of numbers
+    private ArrayList<String> N = new ArrayList<>();
+    //S is the set of symbols
+    private ArrayList<String> S = new ArrayList<>();
+    //Op is the set of operations
+    private ArrayList<String> Op = new ArrayList<>();
+    //vLoc is the set of variable locations
+    private ArrayList<Integer> vLoc = new ArrayList<>();
+    //sLoc is the set of space locations
+    private ArrayList<Integer> sLoc = new ArrayList<>();
+    //opLoc is the set of operation locations
+    private ArrayList<Integer> opLoc = new ArrayList<>();
+
+    private Formatting f = new Formatting();
+
+    public String getVariable() {
+        return variable;
+    }
+    public ArrayList<String> getN() {
+        return N;
+    }
+    public ArrayList<String> getOp() {
+        return Op;
+    }
+    public ArrayList<String> getS() {
+        return S;
+    }
+    public ArrayList<Integer> getvLoc() {
+        return vLoc;
+    }
+    public ArrayList<Integer> getsLoc(){return sLoc;}
+    public ArrayList<Integer> getopLoc(){return opLoc;}
+
+    private String retrieveVariable(String fx){
+        String var = "";
+
+        for(int i = 0; i < fx.length(); i++){
+            String charToString = fx.charAt(i)+"";
+
+            if(!f.isNumeric(charToString) && !charToString.equals("^") && !charToString.equals("+") && !charToString.equals("-")
+                    && !charToString.equals("(") && !charToString.equals(")") && !charToString.equals("*") && !charToString.equals("/")){
+                //the variable chosen is always the last one in the fx
+                var = charToString;
+            }
+        }
+        return var;
+    }
+
+    private void breakDown(String fx){
+        variable = retrieveVariable(fx);
+
+        for(int i = 0; i < fx.length(); i++){
+            String charToString = fx.charAt(i)+"";
+            if(f.isNumeric(charToString)){
+                //put all numbers in N
+                N.add(charToString);
+            }else if(!f.isNumeric(charToString)){
+                if(charToString.equals(" ")){
+                    //put space locations into sLoc
+                    sLoc.add(i);
+                }
+                if(charToString.equals("+") || charToString.equals("-") || charToString.equals("*") || charToString.equals("/")){
+                    //Put all operations in Op
+                    Op.add(charToString);
+                    opLoc.add(i);
+                }
+                else{
+                    //Put all other symbols in S
+                    S.add(charToString);
+                    if(charToString.equals(variable)){
+                        //Put variable locations in vLoc
+                        vLoc.add(i);
+                    }
+                }
+            }
+        }
+    }
+
+    public boolean isitpoly(String fx){
+        breakDown(fx);
+        ArrayList<String> symbols = f.removeSpaces(variable, S);
+
+        //K is the set of keys
+        ArrayList<Boolean> K = new ArrayList<>();
+        String symK = "^";
+
+        //determine which symbols are symK and which ones are not
+        for(String s : symbols){
+            if(s.equals(symK)){
+                K.add(true);
+            }else{
+                K.add(false);
+            }
+        }
+
+        //if one of the symbols is false return its not a polynomial
+        for(boolean k : K){
+            if(!k){
+                return false;
+            }
+        }
+
+        return true;
+
+    }
+
+    private boolean windDown(boolean b1, boolean b2){
+        if(b1){
+            return b2;
+        }
+
+        return false;
+    }
+
+    public boolean isittrig(String fx){
+        //gather all symbols, remove all spaces and variables
+        ArrayList<String> sym = f.removeSpaces(variable, S);
+        sym = f.removeSpaces("^", sym);
+
+        ArrayList<String> terms = new ArrayList<>();
+        for(int i = 0; i < sym.size(); i += 3) {
+            terms.add( gatherElements(i, i + 3, sym) );
+        }
+
+        for(String s : terms){
+            boolean b = oneTermTrig(s);
+            if(!b){
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private String gatherElements(int low, int up, ArrayList<String> sym){
+        StringBuilder sb = new StringBuilder();
+        for(int i = low; i < up; i++){
+            sb.append(sym.get(i));
+        }
+        return sb.toString();
+    }
+
+    private boolean oneTermTrig(String trigWord){
+        //1st 2nd 3rd
+        String frt = "";
+        String snd = "";
+        String thd = "";
+
+        if(trigWord.length() == 3) {
+             frt = trigWord.charAt(0)+"";
+             snd = trigWord.charAt(1)+"";
+             thd = trigWord.charAt(2)+"";
+        }
+
+        if(frt.equals("s")){
+            return windDown(snd.equals("i") || snd.equals("e"), thd.equals("n") || thd.equals("c"));
+        }
+        if(frt.equals("c")){
+            return  windDown(snd.equals("o") || snd.equals("s"), thd.equals("s") || thd.equals("c") || thd.equals("t"));
+        }
+        if(frt.equals("t")){
+            return windDown(snd.equals("a"), thd.equals("n"));
+        }
+
+        return false;
+    }
+
+    public boolean isitlog(){
+        Formatting f = new Formatting();
+        ArrayList<String> symbols = f.removeSpaces(variable, S);
+        String frt;
+        String snd;
+        String thd;
+        //check natural log
+        if(symbols.size() == 2){
+            frt = symbols.get(0);
+            snd = symbols.get(1);
+            return frt.equals("l") && snd.equals("n");
+        }//check standard log
+        else if(symbols.size() == 3){
+            frt = symbols.get(0);
+            snd = symbols.get(1);
+            thd = symbols.get(2);
+            return frt.equals("l") && snd.equals("o") && thd.equals("g") ;
+        }
+
+        return false;
+    }
+
+    public boolean isitcompostion(String fx){
+        //identify if inside function is anything other than x
+        return false;
+    }
+
+}
